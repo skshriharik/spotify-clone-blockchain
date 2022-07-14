@@ -7,6 +7,10 @@ use std::mem::size_of;
 // automatically when you build the project.
 declare_id!("3hBEsV9gGHexaPFtUouDmFPN19wZDmbV1j2U7FiRecU5");
 
+const TEXT_LENGTH: usize= 255;
+const MUSIC_URL_LENGTH: usize= 255;
+
+
 #[program]
 mod spotify_clone {
     use super::*;
@@ -18,7 +22,7 @@ mod spotify_clone {
         let ix = anchor_lang::solana_program::system_instruction::transfer(
             &ctx.accounts.authority.key(),
             &ctx.accounts.reciver.key(),
-            500000000,
+            250000000,
         );
         anchor_lang::solana_program::program::invoke(
             &ix,
@@ -27,6 +31,18 @@ mod spotify_clone {
             ctx.accounts.reciver.to_account_info(),
             ]
         )
+    }
+
+    pub fn create_music(
+        ctx: Context<CreateMusic>, 
+        title: String, 
+        music_url:String  
+    ) -> ProgramResult {
+        let music = &mut ctx.accounts.music;
+        music.authority = ctx.accounts.authority.key();
+        music.title = title;
+        music.music_url = music_url;
+        Ok(())
     }
 }
 
@@ -60,3 +76,46 @@ pub struct PayerContext<'info> {
 pub struct PayerAccount{
     pub wallet:Pubkey,
 }
+
+
+// Create Music context
+#[derive(Accounts)]
+pub struct CreateMusic<'info> {
+    #[account(
+        init,
+        seeds = [b"music".as_ref(), randomkey.key().as_ref()],
+        bump,
+        payer = authority,
+        space = size_of::<MusicAccount>() + TEXT_LENGTH + MUSIC_URL_LENGTH + 8
+    )]
+
+    pub music: Account<'info, MusicAccount>,
+
+    #[account(mut)]
+    pub randomkey: AccountInfo<'info>,
+    #[account(mut)]
+    pub system_program: UncheckedAccount<'info>,
+    //
+
+    #[account(mut)]
+    pub authority:Signer<'info>,
+    
+    #[account(constraint = token_program.key == &token::ID)]
+    pub token_program: Program<'info, Token>,
+
+    pub clock: Sysvar<'info, Clock>,
+    
+}
+
+#[account]
+pub struct MusicAccount {
+    pub authority: Pubkey,
+    pub title: String,
+    pub music_url: String,
+}
+
+
+
+
+
+
